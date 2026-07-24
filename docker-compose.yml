@@ -1,0 +1,58 @@
+# ============================================================
+#  FL Parser Bot — docker compose
+#
+#  Быстрый старт:
+#    1. cp .env.example .env  &&  вписать BOT_TOKEN
+#    2. docker compose up -d --build
+#    3. docker compose logs -f bot
+#
+#  По умолчанию используется SQLite (данные и логи — в named volumes).
+#  Для PostgreSQL см. закомментированный блок ниже.
+# ============================================================
+services:
+  bot:
+    build: .
+    image: fl-parser-bot:latest
+    container_name: fl-parser-bot
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      # Переопределяем пути на volume-каталоги внутри контейнера.
+      DATABASE_URL: "sqlite+aiosqlite:////app/data/fl_parser.db"
+      LOG_FILE: "/app/logs/bot.log"
+    volumes:
+      - bot-data:/app/data
+      - bot-logs:/app/logs
+    # --- Вариант с PostgreSQL: раскомментируйте и уберите DATABASE_URL выше ---
+    # environment:
+    #   DATABASE_URL: "postgresql+asyncpg://flbot:flbot@db:5432/flparser"
+    #   LOG_FILE: "/app/logs/bot.log"
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+  # ------------------------------------------------------------------
+  # PostgreSQL (опционально). Требует добавить в requirements.txt: asyncpg
+  # ------------------------------------------------------------------
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: fl-parser-db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: flbot
+  #     POSTGRES_PASSWORD: flbot
+  #     POSTGRES_DB: flparser
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U flbot -d flparser"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  bot-data:
+  bot-logs:
+  # pg-data:

@@ -1,0 +1,33 @@
+# Виртуальные окружения и кэши
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# Секреты и локальные данные (не должны попадать в образ)
+.env
+*.db
+*.sqlite3
+data/
+logs/
+
+# Документация и служебные файлы сборки
+*.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+deploy/
+
+# ОС/редакторы
+.DS_Store
+.idea/
+.vscode/

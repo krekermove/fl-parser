@@ -277,6 +277,72 @@ assert f.matches(p)
 
 ---
 
+## 🚢 Деплой на сервер
+
+### Вариант 1 — Docker Compose (рекомендуется)
+
+Нужен сервер (VPS) с установленными **Docker** и **Docker Compose**.
+
+```bash
+# 1. Скопировать проект на сервер (git clone / scp / rsync)
+git clone <repo> fl-parser && cd fl-parser
+
+# 2. Создать .env и указать токен
+cp .env.example .env
+nano .env                     # вписать BOT_TOKEN
+
+# 3. Собрать и запустить в фоне
+docker compose up -d --build
+
+# 4. Логи и управление
+docker compose logs -f bot    # смотреть логи
+docker compose restart bot    # перезапуск
+docker compose down           # остановить
+```
+
+- Данные БД и логи хранятся в named volumes (`bot-data`, `bot-logs`) и
+  переживают пересборку контейнера.
+- `restart: unless-stopped` — бот сам поднимется после падения или ребута
+  сервера.
+- Секреты (`.env`) **не** попадают в образ (исключены в `.dockerignore`),
+  передаются в контейнер через `env_file`.
+- Graceful shutdown: `tini` как PID 1 корректно доставляет `SIGTERM` от
+  `docker stop` в aiogram.
+
+**Обновление до новой версии:**
+```bash
+git pull
+docker compose up -d --build
+```
+
+**PostgreSQL вместо SQLite:** раскомментируйте сервис `db` и блок
+`environment` с `DATABASE_URL` в `docker-compose.yml`, добавьте `asyncpg` в
+`requirements.txt` и пересоберите.
+
+### Вариант 2 — systemd (без Docker)
+
+Готовый юнит — `deploy/fl-parser-bot.service` (инструкция в шапке файла):
+
+```bash
+sudo cp deploy/fl-parser-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now fl-parser-bot
+sudo journalctl -u fl-parser-bot -f
+```
+
+`Restart=always` перезапускает бота при сбоях; `enable` — автозапуск при
+загрузке сервера.
+
+### Чек-лист перед продакшеном
+
+- [ ] Создан `.env` с реальным `BOT_TOKEN` (файл не коммитить — он в `.gitignore`).
+- [ ] Настроен `CHECK_INTERVAL_MINUTES` (слишком частые проверки → риск блокировки).
+- [ ] При необходимости указан `HTTP_PROXY` (особенно для Kwork).
+- [ ] Проверены логи первого цикла: `docker compose logs -f bot`.
+- [ ] Настроено резервное копирование volume `bot-data` (если важна история).
+
+---
+
 ## ⚖️ Дисклеймер
 
 Парсинг должен соответствовать правилам и `robots.txt` бирж. Проект

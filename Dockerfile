@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # ============================================================
 #  FL Parser Bot — production image
 # ============================================================
@@ -12,11 +11,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TZ=UTC
 
 WORKDIR /app
-
-# tini — корректная обработка сигналов (graceful shutdown) и reaping zombie-процессов.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends tini \
-    && rm -rf /var/lib/apt/lists/*
 
 # 1. Зависимости ставим отдельным слоем — кэшируется, пока не менялся requirements.txt.
 COPY requirements.txt .
@@ -36,6 +30,7 @@ USER appuser
 ENV DATABASE_URL="sqlite+aiosqlite:////app/data/fl_parser.db" \
     LOG_FILE="/app/logs/bot.log"
 
-# tini как PID 1 → сигналы (SIGTERM от `docker stop`) доходят до Python и aiogram.
-ENTRYPOINT ["tini", "--"]
+# aiogram сам обрабатывает SIGTERM/SIGINT → graceful shutdown по `docker stop`.
+# Для reaping дочерних процессов запускайте с init:
+#   compose — init: true (см. docker-compose.yml); docker run — флаг --init.
 CMD ["python", "main.py"]
