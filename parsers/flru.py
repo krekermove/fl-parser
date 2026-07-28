@@ -14,8 +14,15 @@ from .base import BaseParser
 from .dto import Project
 from utils.text import parse_budget, truncate
 
-_LISTING_URL = "https://www.fl.ru/projects/"
 _BASE_URL = "https://www.fl.ru"
+
+# Костыль: парсим только нужные категории FL.ru (по одному листингу на категорию).
+_CATEGORY_URLS: tuple[str, ...] = (
+    "https://www.fl.ru/projects/category/saity/",
+    "https://www.fl.ru/projects/category/programmirovanie/",
+    "https://www.fl.ru/projects/category/ai-iskusstvenniy-intellekt/",
+    "https://www.fl.ru/projects/category/mobile/",
+)
 
 
 class FlRuParser(BaseParser):
@@ -23,11 +30,24 @@ class FlRuParser(BaseParser):
     source_name = "FL.ru"
 
     async def parse(self) -> list[Project]:
-        html = await self._http.get_text(_LISTING_URL)
-        if not html:
-            logger.warning("[{}] Пустой ответ от {}", self.source_name, _LISTING_URL)
-            return []
+        projects: list[Project] = []
+        seen: set[str] = set()  # дедуп внутри цикла (категории могут пересекаться)
 
+        for url in _CATEGORY_URLS:
+            html = await self._http.get_text(url)
+            if not html:
+                logger.warning("[{}] Пустой ответ от {}", self.source_name, url)
+                continue
+
+            for project in self._parse_listing(html):
+                if project.url in seen:
+                    continue
+                seen.add(project.url)
+                projects.append(project)
+
+        return projects
+
+    def _parse_listing(self, html: str) -> list[Project]:
         soup = BeautifulSoup(html, "lxml")
         projects: list[Project] = []
 

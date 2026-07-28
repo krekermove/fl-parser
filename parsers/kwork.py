@@ -17,7 +17,8 @@ from .base import BaseParser
 from .dto import Project
 from utils.text import parse_budget, truncate
 
-_LISTING_URL = "https://kwork.ru/projects"
+# Костыль: жёстко ограничиваем биржу нужной категорией (c=11 — Разработка).
+_LISTING_URL = "https://kwork.ru/projects?c=11"
 _BASE_URL = "https://kwork.ru"
 _STATE_RE = re.compile(r"window\.stateData\s*=\s*(\{.*?\});", re.DOTALL)
 
